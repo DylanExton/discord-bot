@@ -11,3 +11,5 @@ The following features are planned for the bot.
 |Logging | 4 | ✘  |
 |Create storage system for requests |5 | ✘ |
 
+Deprecating
+
