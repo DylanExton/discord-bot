@@ -2,6 +2,7 @@
 # - remove temperature
 # - create category name to be something more important
 # - create request logic
+# - refactor and use new libraries
 
 ## Import Statements ##
 import discord
