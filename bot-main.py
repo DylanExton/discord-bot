@@ -12,36 +12,68 @@ import psutil
 import datetime
 import requests
 import json
-from discord_components import DiscordComponents, ComponentsBot, Button, SelectOption, Select
 from discord.ext import commands
 from discord.ext import tasks
+import logging
+import logging.handlers
+
+## Setup Logging ##
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.INFO)
+logging.getLogger('discord.http').setLevel(logging.INFO)
+
+handler = logging.handlers.RotatingFileHandler(
+    filename='/home/dexton/logs/discord.log',
+    encoding='utf-8',
+    maxBytes=32 * 1024 * 1024,  # 32 MiB
+    backupCount=31,  # Rotate through 5 files
+)
+dt_fmt = '%Y-%m-%d %H:%M:%S'
+formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 ## Parse Config File ##
 config = configparser.ConfigParser()
-config.read('/home/bot/conf/discordConfig.cfg')
+config.read('/home/dexton/conf/bot.cfg')
 
 token = config['DISCORD']['token']
 
-current_state = []
+intents = discord.Intents.all()
 
-client = commands.Bot(command_prefix='!')
+client = commands.Bot(command_prefix='!', intents=intents)
 
 def cpu_usage():
     usage = psutil.cpu_percent()
+    print(f'{usage}')
     return usage
 
 def ram_usage():
     usage = psutil.virtual_memory()
     used_free = str(round(usage.used /1024/1024/1024,2)) +"GB/"+ str(round(usage.total/1024/1024/1024,2))+"GB"
+    print(f'{usage} | {used_free}')
     return used_free
+
+@client.event
+async def on_ready():
+    print(f'We have logged in as {client.user}')
+    for guild in client.guilds:
+        print(f'{client.user} has joined {guild.name} - {guild.id}')
+
 
 @client.command()
 async def CPU(ctx):
+    print(f'CPU Command Recieved')
     cpuUsage = cpu_usage()
     ram = ram_usage()
-    Cat = client.get_channel(955316272290218035)
+    print(f'{cpuUsage} | {ram}')
     newName = "CPU: {0}% | RAM: {1}".format(cpuUsage,ram)
-    await Cat.edit(name=newName)
+    await ctx.channel.send(newName)
+
+
+
+
 
 
 @client.command(pass_context=True)
@@ -70,28 +102,10 @@ async def cc(ctx, base, convert, multiplier=1.0):
     currEmbed=discord.Embed(title=emTitle, description="Currency Converter", color=0x00bbff)
     currEmbed.add_field(name=baseCurr, value='{}'.format(float(multiplier)), inline=False)
     currEmbed.add_field(name=convertCurr, value=fmTotal, inline=False)
-    currEmbed.set_footer(text=emFooter, icon_url=ctx.author.avatar_url)
+    currEmbed.set_footer(text=emFooter, icon_url=ctx.author.avatar.url)
     await ctx.message.delete()
     await ctx.send(embed=currEmbed)
 
-@client.command()
-async def cci(ctx):
-    await ctx.send(
-        "Select a thing",
-        components = [
-            Select(
-                placeholder = "Select something!",
-                options = [
-                    SelectOption(label = "A", value = "A"),
-                    SelectOption(label = "B", value = "B")
-                ]
-            )
-        ]
-    )
-
-    interaction = await client.wait_for("select_option")
-    print(interaction.values[0])
-    await interaction.send(content = f"{interaction.values[0]} selected!")
 
 @client.command(pass_context=True)
 async def embed(ctx, car, date):
@@ -100,4 +114,13 @@ async def embed(ctx, car, date):
     embed=discord.Embed(title=name, url="", description=desc, color=0xFF0000)
     await ctx.send(embed=embed)
 
-client.run(token)
+client.run(token, log_handler=None)
+
+# @client.event
+# async def on_message(message):
+#     if message.author == client.user:
+#         return
+
+#     if message.content.startswith('$hello'):
+#         print(f'{message.author} says Hello')
+#         await message.channel.send('Hello!')
