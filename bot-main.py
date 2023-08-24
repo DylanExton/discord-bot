@@ -39,6 +39,7 @@ config = configparser.ConfigParser()
 config.read('/home/dexton/conf/bot.cfg')
 
 token = config['DISCORD']['token']
+ccAPIToken = config['DISCORD']['ccAPIKey']
 
 intents = discord.Intents.all()
 
@@ -47,12 +48,14 @@ client = commands.Bot(command_prefix='!', intents=intents)
 def cpu_usage():
     usage = psutil.cpu_percent()
     print(f'{usage}')
+    logger.info(f'CPU Usage: {usage}')
     return usage
 
 def ram_usage():
     usage = psutil.virtual_memory()
     used_free = str(round(usage.used /1024/1024/1024,2)) +"GB/"+ str(round(usage.total/1024/1024/1024,2))+"GB"
     print(f'{usage} | {used_free}')
+    logger.info(f'RAM Usage: {usage} | {used_free}')
     return used_free
 
 @client.event
@@ -60,6 +63,7 @@ async def on_ready():
     print(f'We have logged in as {client.user}')
     for guild in client.guilds:
         print(f'{client.user} has joined {guild.name} - {guild.id}')
+        logger.info(f'{client.user} has joined {guild.name} - {guild.id}')
 
 
 @client.command()
@@ -68,8 +72,9 @@ async def CPU(ctx):
     cpuUsage = cpu_usage()
     ram = ram_usage()
     print(f'{cpuUsage} | {ram}')
-    newName = "CPU: {0}% | RAM: {1}".format(cpuUsage,ram)
-    await ctx.channel.send(newName)
+    resourceUsage = "CPU: {0}% | RAM: {1}".format(cpuUsage,ram)
+    logger.info(f'CPU Command executed by {ctx.author} returned {resourceUsage}')
+    await ctx.channel.send(resourceUsage)
 
 
 
@@ -85,9 +90,9 @@ async def cc(ctx, base, convert, multiplier=1.0):
     url = "https://api.apilayer.com/exchangerates_data/convert?to={}&from={}&amount={}".format(convertCurr,baseCurr,multiplier)
     payload = {}
     headers= {
-      "apikey": "hVl1QA5fDQNwjm385msOnA1mQKFvkS0Z"
+      "apikey": ccAPIToken
     }
-    print("URL is: {}".format(url))
+    logger.info("URL is: {}".format(url))
     response = requests.request("GET", url, headers=headers, data = payload)
     status_code = response.status_code
     result = response.text
@@ -103,16 +108,9 @@ async def cc(ctx, base, convert, multiplier=1.0):
     currEmbed.add_field(name=baseCurr, value='{}'.format(float(multiplier)), inline=False)
     currEmbed.add_field(name=convertCurr, value=fmTotal, inline=False)
     currEmbed.set_footer(text=emFooter, icon_url=ctx.author.avatar.url)
+    logger.info(f'Currency Converter command called by {ctx.author} which returned HTTP{status_code} : {emTitle}: {result}')
     await ctx.message.delete()
     await ctx.send(embed=currEmbed)
-
-
-@client.command(pass_context=True)
-async def embed(ctx, car, date):
-    name = ctx.message.author
-    desc = str(name) + " would like a " + str(car) + " livery by " + str(date)
-    embed=discord.Embed(title=name, url="", description=desc, color=0xFF0000)
-    await ctx.send(embed=embed)
 
 client.run(token, log_handler=None)
 
