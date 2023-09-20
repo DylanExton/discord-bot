@@ -1,12 +1,11 @@
 ## TODO LIST: ##
-# - remove temperature
-# - create category name to be something more important
 # - create request logic
 # - refactor and use new libraries
 
 ## Import Statements ##
 import discord
 import configparser
+import pwnedpasswords
 import os
 import psutil
 import datetime
@@ -48,14 +47,14 @@ client = commands.Bot(command_prefix='!', intents=intents)
 def cpu_usage():
     usage = psutil.cpu_percent()
     print(f'{usage}')
-    logger.info(f'CPU Usage: {usage}')
+    #logger.info(f'CPU Usage: {usage}')
     return usage
 
 def ram_usage():
     usage = psutil.virtual_memory()
     used_free = str(round(usage.used /1024/1024/1024,2)) +"GB/"+ str(round(usage.total/1024/1024/1024,2))+"GB"
     print(f'{usage} | {used_free}')
-    logger.info(f'RAM Usage: {usage} | {used_free}')
+    #logger.info(f'RAM Usage: {usage} | {used_free}')
     return used_free
 
 @client.event
@@ -73,13 +72,8 @@ async def CPU(ctx):
     ram = ram_usage()
     print(f'{cpuUsage} | {ram}')
     resourceUsage = "CPU: {0}% | RAM: {1}".format(cpuUsage,ram)
-    logger.info(f'CPU Command executed by {ctx.author} returned {resourceUsage}')
+    logger.info(f'{ctx.guild.name}: CPU Command executed by {ctx.author} returned {resourceUsage}')
     await ctx.channel.send(resourceUsage)
-
-
-
-
-
 
 @client.command(pass_context=True)
 async def cc(ctx, base, convert, multiplier=1.0):
@@ -95,7 +89,6 @@ async def cc(ctx, base, convert, multiplier=1.0):
     logger.info("URL is: {}".format(url))
     response = requests.request("GET", url, headers=headers, data = payload)
     status_code = response.status_code
-    result = response.text
     data = response.json()
     print(data)
     us = data['result']
@@ -108,17 +101,26 @@ async def cc(ctx, base, convert, multiplier=1.0):
     currEmbed.add_field(name=baseCurr, value='{}'.format(float(multiplier)), inline=False)
     currEmbed.add_field(name=convertCurr, value=fmTotal, inline=False)
     currEmbed.set_footer(text=emFooter, icon_url=ctx.author.avatar.url)
-    logger.info(f'Currency Converter command called by {ctx.author} which returned HTTP{status_code} : {emTitle}: {result}')
+    logger.info(f'{ctx.guild.name}: Currency Converter called by {ctx.author} which returned HTTP{status_code} : {emTitle}: {fmTotal}')
     await ctx.message.delete()
     await ctx.send(embed=currEmbed)
 
+@client.command(pass_context=True)
+async def pwd(ctx,password):
+    numPasswords = pwnedpasswords.check(password)
+    colour = 0xfe1111
+    tip = "This password has been exposed by a data breach in the past"
+    if numPasswords == 0:
+        colour=0x11fe11
+        tip = "This password has not been exposed in a data breach"
+    obfPwd = password.replace(password[4:], "......")
+    eb = discord.Embed(title="Password Checker", color=colour)
+    eb.add_field(name="Password: ", value=obfPwd, inline=True)
+    eb.add_field(name="Number of Reports: ", value=numPasswords, inline=True)
+    eb.add_field(name="Verdict: ",value=tip, inline=False)
+    eb.set_footer(text="Password checked using pwnedpasswords API")
+    logger.info(f'{ctx.guild.name}: Password Checker called by {ctx.author}: returned {numPasswords} reports for {obfPwd}')
+    await ctx.message.delete()
+    await ctx.channel.send(embed=eb)
+
 client.run(token, log_handler=None)
-
-# @client.event
-# async def on_message(message):
-#     if message.author == client.user:
-#         return
-
-#     if message.content.startswith('$hello'):
-#         print(f'{message.author} says Hello')
-#         await message.channel.send('Hello!')
